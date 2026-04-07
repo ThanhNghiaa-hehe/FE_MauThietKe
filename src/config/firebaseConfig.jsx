@@ -9,9 +9,9 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
 let app;
 let auth;
 let provider;
@@ -30,7 +30,9 @@ export const signInWithGoogle = async () => {
   if (!auth || !provider) {
     throw new Error("Firebase not initialized");
   }
+
   const result = await signInWithPopup(auth, provider);
   const idToken = await result.user.getIdToken();
+
   return idToken;
 };

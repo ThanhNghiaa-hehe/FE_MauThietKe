@@ -20,6 +20,22 @@ export default function CourseDetail() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState({});
 
+  const buildSafeOrderInfo = (title, id) => {
+    const base = title || "Thanh toan khoa hoc";
+    const normalized = base
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const compact = normalized || "Thanh toan khoa hoc";
+    const shortId = String(id || "").slice(-6);
+    const withId = shortId ? `${compact} ${shortId}` : compact;
+
+    return withId.slice(0, 25);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -107,25 +123,42 @@ export default function CourseDetail() {
       // ✅ Backend mới expect: { courseIds: string[], orderInfo: string }
       const paymentData = {
         courseIds: [courseId],  // ✅ Gửi array thay vì string
-        orderInfo: `Thanh toan khoa hoc ${course.title}`
+        orderInfo: buildSafeOrderInfo(course?.title, courseId)
       };
       
       console.log("💳 Payment data:", paymentData);
       
       toast.info("Đang chuyển đến cổng thanh toán...");
       
-      // Gọi API tạo thanh toán VNPay
-      const response = await PaymentAPI.createVNPayPayment(paymentData);
+      // Gọi API tạo thanh toán PayOS
+      const response = await PaymentAPI.createPayOSPayment(paymentData);
       
       console.log("💳 Payment response:", response.data);
-      
-      if (response.data.success && response.data.data.paymentUrl) {
-        // Mở trang thanh toán VNPay trong tab mới
-        window.open(response.data.data.paymentUrl, '_blank');
-        toast.success("Đã mở cổng thanh toán trong tab mới!");
-      } else {
-        toast.error("Không thể tạo thanh toán. Vui lòng thử lại!");
+
+      const payload = response?.data;
+      if (!payload?.success) {
+        toast.error(payload?.message || "Không thể tạo thanh toán. Vui lòng thử lại!");
+        return;
       }
+
+      const checkoutUrl = payload?.data?.checkoutUrl || payload?.data?.paymentUrl;
+      if (!checkoutUrl) {
+        toast.error("Không nhận được URL thanh toán từ hệ thống (checkoutUrl/paymentUrl).");
+        return;
+      }
+
+      if (payload?.data?.paymentId) {
+        localStorage.setItem('pendingPaymentId', String(payload.data.paymentId));
+      }
+
+      if (payload?.data?.orderCode || payload?.data?.providerOrderCode) {
+        localStorage.setItem('pendingOrderCode', String(payload.data.orderCode || payload.data.providerOrderCode));
+      }
+
+      localStorage.setItem('pendingCourseIds', JSON.stringify([String(courseId)]));
+
+      // Redirect sang PayOS checkout URL
+      window.location.assign(checkoutUrl);
     } catch (err) {
       console.error("❌ Error creating payment:", err);
       console.error("❌ Error details:", err.response?.data);

@@ -8,7 +8,8 @@ import CourseDetail from "./pages/CourseDetail.jsx";
 import CourseContent from "./pages/CourseContent.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import Favorites from "./pages/Favorites.jsx";
-import PaymentCallback from "./pages/PaymentCallback.jsx";
+import PaymentReturn from "./pages/PaymentReturn.jsx";
+import PaymentCancel from "./pages/PaymentCancel.jsx";
 import QuizPage from "./pages/QuizPage.jsx";
 import QuizResult from "./pages/QuizResult.jsx";
 import QuizAttempts from "./pages/QuizAttempts.jsx";
@@ -78,10 +79,15 @@ function App() {
           </ProtectedRoute>
         } />
         
-        {/* Payment Result Route - VNPay redirects here */}
-        <Route path="/payment/result" element={
+        {/* Payment Routes - PayOS redirects here */}
+        <Route path="/payment/return" element={
           <ProtectedRoute>
-            <PaymentCallback />
+            <PaymentReturn />
+          </ProtectedRoute>
+        } />
+        <Route path="/payment/cancel" element={
+          <ProtectedRoute>
+            <PaymentCancel />
           </ProtectedRoute>
         } />
         

@@ -206,24 +206,24 @@
     </div>
 
     <script>
-        // Parse response từ URL params (VNPay callback)
+        // Parse response từ URL params (PayOS return/cancel)
         const urlParams = new URLSearchParams(window.location.search);
         
-        // Build response từ VNPay params
+        const success = (urlParams.get('status') || '').toLowerCase() === 'success';
+        const message = decodeURIComponent(
+            urlParams.get('message') || (success ? 'Thanh toán thành công' : 'Thanh toán thất bại')
+        );
+
+        // Build response từ params (shape tùy backend/PayOS config)
         const responseData = {
-            success: urlParams.get('vnp_ResponseCode') === '00',
-            message: urlParams.get('vnp_ResponseCode') === '00' ? "Thanh toán thành công" : "Thanh toán thất bại",
+            success,
+            message,
             data: {
-                amount: parseInt(urlParams.get('vnp_Amount') || 0) / 100,
-                paymentId: urlParams.get('vnp_TxnRef') || 'N/A',
-                transactionNo: urlParams.get('vnp_TransactionNo') || 'N/A',
-                bankCode: urlParams.get('vnp_BankCode') || 'N/A',
-                payDate: urlParams.get('vnp_PayDate') || 'N/A',
-                orderInfo: decodeURIComponent(urlParams.get('vnp_OrderInfo') || ''),
-                responseCode: urlParams.get('vnp_ResponseCode'),
-                transactionStatus: urlParams.get('vnp_TransactionStatus'),
+                amount: parseInt(urlParams.get('amount') || 0),
+                paymentId: urlParams.get('paymentId') || 'N/A',
+                orderCode: urlParams.get('orderCode') || 'N/A',
                 coursesEnrolled: 1, // Backend cần thêm thông tin này
-                status: "success"
+                status: urlParams.get('status') || 'unknown'
             }
         };
         

@@ -2,20 +2,12 @@ import axiosInstance from "../config/axios";
 
 const PaymentAPI = {
   /**
-   * 💳 Tạo thanh toán VNPay (Direct course purchase)
-   * POST /api/payment/vnpay/create
-   * Body: { courseIds: string[], orderInfo: string }
+   * 💳 Tạo thanh toán PayOS (Direct course purchase)
+   * POST /api/payment/payos/create
+   * Body: { courseIds: string[], orderInfo?: string }
    */
-  createVNPayPayment: (data) => {
-    return axiosInstance.post('/payment/vnpay/create', data);
-  },
-
-  /**
-   * 🔄 Xử lý VNPay return callback (sau khi thanh toán)
-   * GET /api/payment/vnpay/return?vnp_ResponseCode=...&vnp_TxnRef=...
-   */
-  handleVNPayReturn: (queryParams) => {
-    return axiosInstance.get('/payment/vnpay/return', { params: queryParams });
+  createPayOSPayment: (data) => {
+    return axiosInstance.post('/payment/payos/create', data);
   },
 
   /**

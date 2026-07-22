@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { signInWithGoogle } from "../config/firebaseConfig.jsx";
-import AuthAPI from "../api/authApi.jsx";
+import AuthAPI from "../api/authAPI.jsx";
 import toast from "../utils/toast.js";
 import SuccessModal from "./SuccessModal.jsx";
 

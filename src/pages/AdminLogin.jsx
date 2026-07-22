@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthAPI from "../api/authApi.jsx";
+import AuthAPI from "../api/authAPI.jsx";
 import toast from "../utils/toast.js";
 
 export default function AdminLogin() {

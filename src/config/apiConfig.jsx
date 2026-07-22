@@ -1,5 +1,5 @@
-const API_BASE_URL = 'http://localhost:8080/api';
-const STATIC_BASE_URL = 'http://localhost:8080'; // Thay đổi để support cả /static và /uploads
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const STATIC_BASE_URL = import.meta.env.VITE_STATIC_BASE_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/auth/login`,

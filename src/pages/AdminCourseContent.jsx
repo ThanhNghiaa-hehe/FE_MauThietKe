@@ -459,34 +459,17 @@ export default function AdminCourseContent() {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={lessonForm.title}
-                    onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
-                    placeholder="Enter lesson title"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Type
-                  </label>
-                  <select
-                    value={lessonForm.type}
-                    onChange={(e) => setLessonForm({ ...lessonForm, type: e.target.value })}
-                    className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
-                  >
-                    <option value="VIDEO">Video</option>
-                    <option value="TEXT">Text</option>
-                    <option value="QUIZ">Quiz</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={lessonForm.title}
+                  onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
+                  className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2 text-white focus:border-purple-500 focus:outline-none"
+                  placeholder="Enter lesson title"
+                />
               </div>
 
               <div>

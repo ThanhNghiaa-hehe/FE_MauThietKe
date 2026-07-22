@@ -1,14 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import UserAPI from "../api/userAPI";
 
 export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userName, setUserName] = useState(() => localStorage.getItem("userFullname") || "User");
+  const [userEmail, setUserEmail] = useState(() => localStorage.getItem("userEmail") || "");
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    const storedName = localStorage.getItem("userFullname");
+    const storedEmail = localStorage.getItem("userEmail");
+    if (storedName) setUserName(storedName);
+    if (storedEmail) setUserEmail(storedEmail);
+
+    UserAPI.getCurrentUser()
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          const uData = res.data.data;
+          const name = uData.fullname || uData.email || "User";
+          setUserName(name);
+          setUserEmail(uData.email || storedEmail || "");
+          if (uData.fullname) {
+            localStorage.setItem("userFullname", uData.fullname);
+          }
+          if (uData.email) {
+            localStorage.setItem("userEmail", uData.email);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Sidebar get user info error:", err);
+      });
+  }, []);
 
   const menuItems = [
     { icon: "home", label: "Dashboard", path: "/home" },
     { icon: "school", label: "My Courses", path: "/my-courses" },
+    { icon: "receipt_long", label: "Hóa đơn thanh toán", path: "/my-invoices" },
     { icon: "favorite", label: "Favorites", path: "/favorites" },
   ];
 
@@ -125,14 +158,16 @@ export default function Sidebar({ onLogout }) {
       {/* User Profile & Logout */}
       <div className="p-4" style={{ borderTop: `2px solid var(--border-color)` }}>
         <div className={`flex items-center gap-3 mb-3 ${isCollapsed ? "justify-center" : ""}`}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex-shrink-0">
-            <span className="text-sm font-bold text-white">U</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 font-bold text-white">
+            {userName ? userName.charAt(0).toUpperCase() : "U"}
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>User</p>
-              <p className="truncate text-xs" style={{ color: 'var(--text-secondary)' }}>
-                {localStorage.getItem("userEmail") || "user@example.com"}
+              <p className="truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }} title={userName}>
+                {userName}
+              </p>
+              <p className="truncate text-xs" style={{ color: 'var(--text-secondary)' }} title={userEmail}>
+                {userEmail || "user@example.com"}
               </p>
             </div>
           )}

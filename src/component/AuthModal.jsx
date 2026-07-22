@@ -6,6 +6,86 @@ import AuthAPI from "../api/authApi.jsx";
 import toast from "../utils/toast.js";
 import SuccessModal from "./SuccessModal.jsx";
 
+function SixDigitOtpInput({ length = 6, value = "", onChange, onComplete, disabled }) {
+  const inputRefs = React.useRef([]);
+
+  const handleChange = (e, index) => {
+    const val = e.target.value;
+    if (!/^\d*$/.test(val)) return;
+
+    if (val.length > 1) {
+      const digits = val.slice(0, length).split("");
+      const newOtp = digits.join("").slice(0, length);
+      onChange(newOtp);
+      const focusIndex = Math.min(digits.length, length - 1);
+      if (inputRefs.current[focusIndex]) {
+        inputRefs.current[focusIndex].focus();
+      }
+      if (newOtp.length === length && onComplete) {
+        onComplete(newOtp);
+      }
+      return;
+    }
+
+    const currentDigits = (value || "").split("");
+    currentDigits[index] = val;
+    const newOtp = currentDigits.join("");
+    onChange(newOtp);
+
+    if (val && index < length - 1 && inputRefs.current[index + 1]) {
+      inputRefs.current[index + 1].focus();
+    }
+
+    if (newOtp.length === length && onComplete) {
+      setTimeout(() => onComplete(newOtp), 50);
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace") {
+      if (!value[index] && index > 0 && inputRefs.current[index - 1]) {
+        inputRefs.current[index - 1].focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").trim();
+    if (/^\d+$/.test(pasteData)) {
+      const pastedDigits = pasteData.slice(0, length);
+      onChange(pastedDigits);
+      if (pastedDigits.length === length && onComplete) {
+        setTimeout(() => onComplete(pastedDigits), 50);
+      }
+      const focusIdx = Math.min(pastedDigits.length, length - 1);
+      if (inputRefs.current[focusIdx]) {
+        inputRefs.current[focusIdx].focus();
+      }
+    }
+  };
+
+  return (
+    <div className="flex justify-between gap-2 my-4">
+      {Array.from({ length }).map((_, idx) => (
+        <input
+          key={idx}
+          ref={(el) => (inputRefs.current[idx] = el)}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[idx] || ""}
+          onChange={(e) => handleChange(e, idx)}
+          onKeyDown={(e) => handleKeyDown(e, idx)}
+          onPaste={handlePaste}
+          disabled={disabled}
+          className="w-11 h-13 text-center text-xl font-bold rounded-xl bg-gray-900 border border-gray-700 text-white focus:border-purple-500 focus:bg-gray-800 focus:outline-none transition shadow-inner"
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function AuthModal() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("register");
@@ -56,71 +136,106 @@ export default function AuthModal() {
 
   // Register
   const register = async () => {
-  try {
-    setRegisterLoading(true);
-    const res = await AuthAPI.register({
-      fullname: fullName,
-      email: registerEmail,
-      password: registerPassword,
-      phoneNumber,
-    });
+    try {
+      setRegisterLoading(true);
+      const res = await AuthAPI.register({
+        fullname: fullName,
+        email: registerEmail,
+        password: registerPassword,
+        phoneNumber,
+      });
 
-    const token = res.data?.data?.token;
+      const token = res.data?.data?.token;
 
-    if (res.data.success && token) {
-      setOtpToken(token);
-      setStep("verify-otp"); // ← THÊM DÒNG NÀY để chuyển sang bước nhập OTP
-      toast.success("Gửi OTP thành công! Vui lòng kiểm tra email của bạn.");
-    } else {
-      toast.error(res.data.message || "Register failed");
+      if (res.data.success && token) {
+        sessionStorage.setItem("pendingOtpToken", token);
+        setOtpToken(token);
+        setStep("verify-otp");
+        toast.success("Gửi OTP thành công! Vui lòng kiểm tra email của bạn.");
+      } else {
+        toast.error(res.data.message || "Register failed");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Error");
+    } finally {
+      setRegisterLoading(false);
     }
-  } catch (e) {
-    toast.error(e.response?.data?.message || "Error");
-  } finally {
-    setRegisterLoading(false);
+  };
+
+
+  const isVerifyingRef = React.useRef(false);
+
+  // Verify OTP & Auto-login
+ const verifyOtp = async (overrideCode) => {
+  const code = typeof overrideCode === "string" ? overrideCode : otpCode;
+  if (!code || code.length < 6 || isVerifyingRef.current) return;
+
+  const targetToken = otpToken || sessionStorage.getItem("pendingOtpToken");
+  if (!targetToken) {
+    toast.error("Không tìm thấy mã phiên OTP. Vui lòng thử đăng ký lại!");
+    return;
   }
-};
 
-
-  // Verify OTP
- const verifyOtp = async () => {
   try {
+    isVerifyingRef.current = true;
     setOtpLoading(true);
 
     console.log("👉 Running verifyOtp...");
-    console.log("Token gửi lên:", otpToken);
-    console.log("OTP gửi lên:", otpCode);
+    console.log("Token gửi lên:", targetToken);
+    console.log("OTP gửi lên:", code);
 
     const res = await AuthAPI.verifyOtp({
-      token: otpToken,
-      otp: otpCode,
+      token: targetToken,
+      otp: code,
     });
 
     console.log("👉 VERIFY RESPONSE:", res.data);
 
-    if (res.data.success) {
-      console.log("OTP OK, chuyển về login");
+    if (res.data?.success) {
+      sessionStorage.removeItem("pendingOtpToken");
+      const accessToken = res.data?.data?.accessToken;
+      const userObj = res.data?.data?.user;
       
-      // Show success modal
-      setSuccessMessage("Đăng ký tài khoản thành công! Hãy đăng nhập để tiếp tục.");
-      setShowSuccessModal(true);
-      
-      // Chuyển sang tab login sau 2 giây
-      setTimeout(() => {
-        setActiveTab("login");
-        setShowSuccessModal(false);
-        // Reset form đăng ký
-        setStep("register");
-        setFullName("");
-        setPhoneNumber("");
-        setRegisterEmail("");
-        setRegisterPassword("");
-        setOtpCode("");
-        setOtpToken("");
-      }, 2000);
+      if (accessToken) {
+        // Tự động đăng nhập
+        const decoded = jwtDecode(accessToken);
+        let userRole = decoded.role || decoded.authorities?.[0] || decoded.scope || userObj?.role || "USER";
+        if (userRole && userRole.startsWith("ROLE_")) {
+          userRole = userRole.substring(5);
+        }
+
+        const enrolledCourses = localStorage.getItem("enrolledCourses");
+        const favoriteCourses = localStorage.getItem("favoriteCourses");
+
+        localStorage.clear();
+
+        if (enrolledCourses) localStorage.setItem("enrolledCourses", enrolledCourses);
+        if (favoriteCourses) localStorage.setItem("favoriteCourses", favoriteCourses);
+
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("userEmail", userObj?.email || registerEmail || decoded.sub || "");
+        localStorage.setItem("userFullname", userObj?.fullname || fullName || "User");
+        localStorage.setItem("userRole", userRole);
+
+        setSuccessMessage("Đăng ký & Đăng nhập thành công! Đang chuyển trang...");
+        setShowSuccessModal(true);
+
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          window.location.href = (userRole === "ADMIN" || userRole === "ROLE_ADMIN") ? "/admin/dashboard" : "/home";
+        }, 1000);
+      } else {
+        // Fallback chuyển tab login nếu server không trả accessToken
+        setSuccessMessage("Đăng ký tài khoản thành công! Hãy đăng nhập để tiếp tục.");
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          setActiveTab("login");
+          setShowSuccessModal(false);
+        }, 1200);
+      }
     } else {
-      console.warn("Server báo lỗi:", res.data.message);
-      toast.error(res.data.message || "OTP không chính xác");
+      console.warn("Server báo lỗi:", res.data?.message);
+      toast.error(res.data?.message || "Mã OTP không chính xác");
     }
 
   } catch (e) {
@@ -129,6 +244,7 @@ export default function AuthModal() {
     toast.error(e.response?.data?.message || "Xác thực OTP thất bại");
   } finally {
     setOtpLoading(false);
+    isVerifyingRef.current = false;
   }
 };
 
@@ -180,6 +296,9 @@ export default function AuthModal() {
         // Set new auth data
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("userEmail", loginEmail);
+        if (decoded.fullname || decoded.name) {
+          localStorage.setItem("userFullname", decoded.fullname || decoded.name);
+        }
         if (userRole) {
           localStorage.setItem("userRole", userRole);
         }
@@ -295,12 +414,14 @@ export default function AuthModal() {
   };
 
   // Forgot Password - Step 2: Verify OTP
-  const verifyForgotPasswordOtp = async () => {
+  const verifyForgotPasswordOtp = async (overrideCode) => {
+    const code = typeof overrideCode === "string" ? overrideCode : forgotPasswordOtp;
+    if (!code || code.length < 6) return;
     try {
       setForgotPasswordLoading(true);
       const res = await AuthAPI.verifyOtpPassword({
         token: forgotPasswordToken,
-        otp: forgotPasswordOtp,
+        otp: code,
       });
 
       if (res.data.success) {
@@ -399,16 +520,34 @@ export default function AuthModal() {
         </button>
       </>
     ) : (
-      <>
-        <p className="text-white mb-2">Nhập mã OTP đã được gửi đến email: {registerEmail}</p>
-        <input placeholder="OTP Code" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} className="form-input" />
-        <button onClick={verifyOtp} disabled={otpLoading || !otpCode} className="bg-primary text-white py-2 rounded">
-          {otpLoading ? <Spinner /> : "Verify OTP"}
+      <div className="flex flex-col gap-3">
+        <div className="text-center">
+          <p className="text-white font-bold text-base">Xác thực mã OTP</p>
+          <p className="text-gray-400 text-xs mt-1">
+            Mã OTP 6 chữ số đã được gửi đến: <br />
+            <span className="text-purple-400 font-semibold">{registerEmail}</span>
+          </p>
+        </div>
+
+        <SixDigitOtpInput
+          value={otpCode}
+          onChange={setOtpCode}
+          onComplete={(code) => verifyOtp(code)}
+          disabled={otpLoading}
+        />
+
+        <button
+          onClick={() => verifyOtp()}
+          disabled={otpLoading || otpCode.length < 6}
+          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl disabled:opacity-50 transition shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+        >
+          {otpLoading ? <Spinner /> : "Xác thực & Đăng nhập"}
         </button>
-        <button onClick={() => setStep("register")} className="text-sm text-gray-400">
-          Quay lại
+
+        <button onClick={() => setStep("register")} className="text-xs text-gray-400 hover:text-white text-center mt-1">
+          ← Quay lại chỉnh sửa thông tin
         </button>
-      </>
+      </div>
     )}
     <div className="my-2 text-center text-gray-500">OR</div>
     <button onClick={googleSignIn} disabled={googleLoading} className="border border-gray-600 text-white py-2 rounded">
@@ -446,6 +585,17 @@ export default function AuthModal() {
               <button onClick={googleSignIn} disabled={googleLoading} className="border border-gray-600 text-white py-2 rounded">
                 {googleLoading ? <Spinner /> : "Continue with Google"}
               </button>
+
+              <div className="mt-4 pt-4 border-t border-gray-800 text-center">
+                <button
+                  type="button"
+                  onClick={() => navigate("/my-invoices")}
+                  className="text-sm text-purple-400 hover:text-purple-300 flex items-center justify-center gap-1 mx-auto"
+                >
+                  <span className="material-symbols-outlined text-sm">receipt_long</span>
+                  Tra cứu hóa đơn qua SĐT (Không cần đăng nhập)
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -488,25 +638,31 @@ export default function AuthModal() {
               )}
 
               {forgotPasswordStep === "verify-otp" && (
-                <div className="flex flex-col gap-4">
-                  <p className="text-gray-400 text-sm">Nhập mã OTP đã được gửi đến: <span className="text-white">{forgotPasswordEmail}</span></p>
-                  <input 
-                    placeholder="Mã OTP (6 chữ số)" 
-                    value={forgotPasswordOtp} 
-                    onChange={(e) => setForgotPasswordOtp(e.target.value)} 
-                    className="form-input bg-gray-900 border border-gray-700 text-white px-4 py-2 rounded focus:border-primary"
-                    maxLength="6"
+                <div className="flex flex-col gap-3">
+                  <div className="text-center">
+                    <p className="text-white font-bold text-base">Xác thực OTP Quên mật khẩu</p>
+                    <p className="text-gray-400 text-xs mt-1">
+                      Mã 6 chữ số đã được gửi đến: <span className="text-purple-400 font-semibold">{forgotPasswordEmail}</span>
+                    </p>
+                  </div>
+
+                  <SixDigitOtpInput
+                    value={forgotPasswordOtp}
+                    onChange={setForgotPasswordOtp}
+                    onComplete={(code) => verifyForgotPasswordOtp(code)}
+                    disabled={forgotPasswordLoading}
                   />
+
                   <button 
-                    onClick={verifyForgotPasswordOtp} 
-                    disabled={forgotPasswordLoading || !forgotPasswordOtp}
-                    className="bg-primary text-white py-2 rounded disabled:opacity-50 flex items-center justify-center gap-2"
+                    onClick={() => verifyForgotPasswordOtp()} 
+                    disabled={forgotPasswordLoading || forgotPasswordOtp.length < 6}
+                    className="bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold disabled:opacity-50 flex items-center justify-center gap-2 transition"
                   >
-                    {forgotPasswordLoading ? <Spinner /> : "Xác thực OTP"}
+                    {forgotPasswordLoading ? <Spinner /> : "Xác nhận OTP"}
                   </button>
                   <button 
                     onClick={() => setForgotPasswordStep("email")}
-                    className="text-sm text-gray-400 hover:text-white"
+                    className="text-xs text-gray-400 hover:text-white text-center"
                   >
                     ← Quay lại
                   </button>

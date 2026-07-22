@@ -5,6 +5,8 @@ import Sidebar from "../component/Sidebar.jsx";
 import ThemeToggle from "../component/ThemeToggle.jsx";
 import CourseAPI from "../api/courseAPI.jsx";
 import FavoriteAPI from "../api/favoriteAPI.jsx";
+import ProgressAPI from "../api/progressAPI.jsx";
+import UserAPI from "../api/userAPI.jsx";
 import { getImageUrl } from "../config/apiConfig.jsx";
 import { handleLogout as logout } from "../utils/auth.js";
 import toast from "../utils/toast.js";
@@ -20,6 +22,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [favoriteCourseIds, setFavoriteCourseIds] = useState([]);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState(new Set());
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -38,19 +41,52 @@ export default function Home() {
       console.log("👤 Extracted userId:", uid);
       setUserId(uid);
       
+      const cachedName = localStorage.getItem("userFullname") || decoded.fullname || decoded.name || "User";
       setUser({
-        name: decoded.fullname || decoded.name || "User",
+        name: cachedName,
         email: decoded.email || decoded.sub || localStorage.getItem("userEmail") || "user@example.com"
       });
     } catch (e) {
       console.error("Token decode error:", e);
     }
 
+    UserAPI.getCurrentUser()
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          const uData = res.data.data;
+          const name = uData.fullname || uData.email || "User";
+          setUser((prev) => ({
+            ...prev,
+            name: name,
+            email: uData.email || prev?.email || ""
+          }));
+          if (uData.fullname) {
+            localStorage.setItem("userFullname", uData.fullname);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Home get current user error:", err);
+      });
+
     fetchData();
+    loadEnrolledCourses();
     if (uid) {
       loadFavorites(uid);
     }
   }, [navigate]);
+
+  const loadEnrolledCourses = async () => {
+    try {
+      const res = await ProgressAPI.getMyCourses();
+      if (res.data?.success && Array.isArray(res.data?.data)) {
+        const ids = new Set(res.data.data.map((c) => c.courseId || c.id));
+        setEnrolledCourseIds(ids);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy danh sách khóa học đã mua:", err);
+    }
+  };
 
   useEffect(() => {
     // Filter courses based on category and search query
@@ -374,7 +410,8 @@ export default function Home() {
                 {filteredCourses.map((course, index) => (
                   <div
                     key={course.id}
-                    className="group overflow-hidden rounded-xl transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 course-card animate-slideUp"
+                    onClick={() => navigate(`/course/${course.id}`)}
+                    className="group overflow-hidden rounded-xl transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 course-card animate-slideUp cursor-pointer"
                     style={{ 
                       animationDelay: `${index * 0.05}s`,
                       border: `1px solid var(--card-border)`, 
@@ -497,12 +534,28 @@ export default function Home() {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => navigate(`/course/${course.id}`)}
-                          className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
-                        >
-                          Chi tiết
-                        </button>
+                        {enrolledCourseIds.has(course.id) ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/course/${course.id}/content`);
+                            }}
+                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 transition shadow-lg flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-sm">play_circle</span>
+                            Vào học
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/course/${course.id}`);
+                            }}
+                            className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+                          >
+                            Chi tiết
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

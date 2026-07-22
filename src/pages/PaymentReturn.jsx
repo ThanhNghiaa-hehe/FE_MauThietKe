@@ -138,32 +138,6 @@ export default function PaymentReturn() {
       localStorage.removeItem("pendingOrderCode");
     };
 
-    const enrollFallbackIfMissing = async (courseIds) => {
-      if (!courseIds.length) return;
-
-      try {
-        const myCoursesRes = await ProgressAPI.getMyCourses();
-        const myCoursesPayload = myCoursesRes?.data;
-        const enrolledIds = new Set();
-
-        if (myCoursesPayload?.success && Array.isArray(myCoursesPayload?.data)) {
-          myCoursesPayload.data.forEach((item) => {
-            if (item?.courseId) enrolledIds.add(String(item.courseId));
-            if (item?.id) enrolledIds.add(String(item.id));
-            if (item?.course?.id) enrolledIds.add(String(item.course.id));
-          });
-        }
-
-        const missingCourseIds = courseIds.filter((id) => !enrolledIds.has(String(id)));
-        if (!missingCourseIds.length) return;
-
-        await Promise.allSettled(missingCourseIds.map((id) => ProgressAPI.enrollCourse(id)));
-      } catch (err) {
-        console.warn("Fallback enroll check failed, trying direct enroll:", err);
-        await Promise.allSettled(courseIds.map((id) => ProgressAPI.enrollCourse(id)));
-      }
-    };
-
     const verifyPayment = async () => {
       if (returnData.cancel || returnData.status === "CANCELLED") {
         clearPendingPaymentData();
@@ -206,8 +180,6 @@ export default function PaymentReturn() {
           const confirmedPayment = matchedPayment || fallbackPayment;
 
           if (confirmedPayment) {
-            await enrollFallbackIfMissing(pendingCourseIds);
-
             clearPendingPaymentData();
 
             const amount = Number(
@@ -233,7 +205,6 @@ export default function PaymentReturn() {
 
         if (!cancelled) {
           if (returnData.status === "SUCCESS" || pendingPaymentId || pendingOrderCode) {
-            await enrollFallbackIfMissing(pendingCourseIds);
             clearPendingPaymentData();
 
             setUiState("success");

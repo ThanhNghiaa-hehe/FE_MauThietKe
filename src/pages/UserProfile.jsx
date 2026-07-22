@@ -108,6 +108,9 @@ export default function UserProfile() {
 
       if (res.data.success) {
         toast.success("Cập nhật thông tin thành công!");
+        if (fullname) {
+          localStorage.setItem("userFullname", fullname);
+        }
         fetchUserProfile(); // Refresh data
         setAvatarFile(null); // Clear file input
       } else {

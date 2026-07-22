@@ -72,17 +72,27 @@ export default function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
             <span className="material-symbols-outlined text-purple-500 text-4xl">school</span>
             <h1 className="text-2xl font-bold">CodeLearn</h1>
           </div>
 
-          <button
-            onClick={() => navigate("/auth")}
-            className="rounded-lg bg-purple-600 px-6 py-2 font-medium hover:bg-purple-700"
-          >
-            Đăng nhập / Đăng ký
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/my-invoices")}
+              className="rounded-lg bg-gray-800 border border-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-700 text-gray-200 transition flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base text-purple-400">receipt_long</span>
+              Tra cứu hóa đơn
+            </button>
+
+            <button
+              onClick={() => navigate("/auth")}
+              className="rounded-lg bg-purple-600 px-6 py-2 font-medium hover:bg-purple-700 text-white transition"
+            >
+              Đăng nhập / Đăng ký
+            </button>
+          </div>
         </div>
       </header>
 

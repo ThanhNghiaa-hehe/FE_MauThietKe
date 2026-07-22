@@ -8,10 +8,12 @@ export default function AdminSidebar({ onLogout }) {
 
   const menuItems = [
     { icon: "dashboard", label: "Dashboard", path: "/admin/dashboard" },
+    { icon: "support_agent", label: "Hỗ trợ & CSKH", path: "/admin/support" },
     { icon: "school", label: "Courses", path: "/admin/courses" },
     { icon: "category", label: "Categories", path: "/admin/categories" },
     { icon: "quiz", label: "Quizzes", path: "/admin/quizzes" },
     { icon: "people", label: "Users", path: "/admin/users" },
+    { icon: "confirmation_number", label: "Coupons", path: "/admin/coupons" },
   ];
 
   const isActive = (path) => location.pathname === path;

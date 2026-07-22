@@ -26,6 +26,13 @@ const ProgressAPI = {
   },
 
   /**
+   * Bí danh lấy progress chi tiết của khóa học
+   */
+  getProgress: (courseId) => {
+    return axiosInstance.get(`/progress/course/${courseId}`);
+  },
+
+  /**
    * 📖 Lấy chapters kèm unlock status và progress
    * GET /api/progress/course/{courseId}/chapters
    */

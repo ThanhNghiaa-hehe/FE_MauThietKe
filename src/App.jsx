@@ -10,6 +10,7 @@ import UserProfile from "./pages/UserProfile.jsx";
 import Favorites from "./pages/Favorites.jsx";
 import PaymentReturn from "./pages/PaymentReturn.jsx";
 import PaymentCancel from "./pages/PaymentCancel.jsx";
+import MyInvoices from "./pages/MyInvoices.jsx";
 import QuizPage from "./pages/QuizPage.jsx";
 import QuizResult from "./pages/QuizResult.jsx";
 import QuizAttempts from "./pages/QuizAttempts.jsx";
@@ -19,16 +20,22 @@ import AdminCourseContent from "./pages/AdminCourseContent.jsx";
 import AdminCategories from "./pages/AdminCategories.jsx";
 import AdminUsers from "./pages/AdminUsers.jsx";
 import AdminQuizzes from "./pages/AdminQuizzes.jsx";
+import AdminCoupons from "./pages/AdminCoupons.jsx";
+import AdminSupport from "./pages/AdminSupport.jsx";
 import AuthModal from "./component/AuthModal.jsx";
+import ChatWidget from "./component/ChatWidget.jsx";
 
 function App() {
 
   return (
     <BrowserRouter>
+      <ChatWidget />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthModal />} />
+        <Route path="/my-invoices" element={<MyInvoices />} />
+        <Route path="/lookup-invoice" element={<MyInvoices />} />
         
         {/* User Routes - Protected */}
         <Route path="/home" element={
@@ -47,6 +54,11 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/course/:courseId/learn" element={
+          <ProtectedRoute>
+            <CourseContent />
+          </ProtectedRoute>
+        } />
+        <Route path="/course/:courseId/content" element={
           <ProtectedRoute>
             <CourseContent />
           </ProtectedRoute>
@@ -120,6 +132,16 @@ function App() {
         <Route path="/admin/quizzes" element={
           <ProtectedRoute requireAdmin={true}>
             <AdminQuizzes />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/coupons" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminCoupons />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/support" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminSupport />
           </ProtectedRoute>
         } />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

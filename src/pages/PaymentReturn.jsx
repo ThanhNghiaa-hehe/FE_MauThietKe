@@ -147,6 +147,42 @@ export default function PaymentReturn() {
         return;
       }
 
+      // ⚡ OPTIMIZATION: If URL status is already SUCCESS, display success UI instantly!
+      if (returnData.status === "SUCCESS") {
+        clearPendingPaymentData();
+        setUiState("success");
+        setDetails({
+          orderCode: returnData.orderCode || pendingOrderCode || null,
+          paymentId: returnData.paymentId || pendingPaymentId || null,
+          message: "Thanh toán thành công!",
+        });
+        toast.success("Thanh toán thành công!");
+
+        // Background fetch to enrich amount & exact payment details
+        try {
+          const successRes = await PaymentAPI.getMySuccessfulPayments();
+          const payments = successRes?.data?.data || successRes?.data?.data?.items || [];
+          if (Array.isArray(payments) && payments.length > 0) {
+            const targetOrderCode = returnData.orderCode || pendingOrderCode;
+            const targetPaymentId = returnData.paymentId || pendingPaymentId;
+            const matched = findRelatedSuccessPayment(payments, pendingCourseIds, targetOrderCode, targetPaymentId) || payments[0];
+            if (matched) {
+              const amount = Number(matched?.amount ?? matched?.totalAmount ?? matched?.paidAmount);
+              setDetails((prev) => ({
+                ...prev,
+                paymentId: getPaymentId(matched) || prev?.paymentId,
+                orderCode: getOrderCode(matched) || prev?.orderCode,
+                amount: Number.isFinite(amount) ? amount : prev?.amount,
+                raw: matched,
+              }));
+            }
+          }
+        } catch (bgErr) {
+          console.warn("Background payment detail fetch warning:", bgErr);
+        }
+        return;
+      }
+
       try {
         setUiState("loading");
 
@@ -157,7 +193,7 @@ export default function PaymentReturn() {
           const payload = successRes?.data;
 
           if (!payload?.success) {
-            await sleep(POLL_INTERVAL_MS);
+            await sleep(500);
             continue;
           }
 
@@ -200,7 +236,7 @@ export default function PaymentReturn() {
           }
 
           // Chờ webhook/đồng bộ payment history
-          await sleep(POLL_INTERVAL_MS);
+          await sleep(500);
         }
 
         if (!cancelled) {
